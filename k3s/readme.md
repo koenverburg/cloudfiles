@@ -1,6 +1,6 @@
 # k3s Cluster (single machine server + agent)
 
-1. Download a Raspberry Pi image [https://ubuntu.com/download/raspberry-pi-core](here)
+1. Download a Raspberry Pi image [here](https://ubuntu.com/download/raspberry-pi-core)
 2. burn on on the SD card
 3. After the burning process, create a file called `ssh` in the root of the boot drive of the SD Card
 This is needed otherwise ssh will not be avalible out of the box.
@@ -49,12 +49,12 @@ subjects:
 12. Let's deploy the admin role by running the following command
 `kubectl create -f dashboard.admin-user.yml -f dashboard.admin-user-role.yml`
 
-> moar info can be found here `https://rancher.com/docs/k3s/latest/en/installation/kube-dashboard/#dashboard-rbac-configuration`
+> moar info can be found [here](https://rancher.com/docs/k3s/latest/en/installation/kube-dashboard/#dashboard-rbac-configuration)
 
 13. Obtain the Bearer Token
 On unix `kubectl -n kubernetes-dashboard describe secret admin-user-token | grep ^token`
 On windows `kubectl -n kubernetes-dashboard describe secret admin-user-token`
-14. Open this url on your browser [http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/](kubernetes-dashboard)
+14. Open this url on your browser [kubernetes-dashboard](http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/)
 
 15. At this point we have a cluster up and running but we dont have any pods running, Let's create a test deployment.
 Here we will use a simple nginx image.
@@ -84,7 +84,7 @@ spec:
 ```
 17. Let's apply the deployment
 `kubectl apply -f test-nginx-deployment.yml`
-> Moar info on [https://kubernetes.io/docs/tasks/run-application/run-stateless-application-deployment/](deployments here)!
+> Moar info on [deployments here](https://kubernetes.io/docs/tasks/run-application/run-stateless-application-deployment/)!
 
 18. If we run a `kubectl get pods` we should see the a pod running
 
