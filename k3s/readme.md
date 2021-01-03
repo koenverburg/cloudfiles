@@ -2,8 +2,7 @@
 
 1. Download a Raspberry Pi image [here](https://ubuntu.com/download/raspberry-pi-core)
 2. burn on on the SD card
-3. After the burning process, create a file called `ssh` in the root of the boot drive of the SD Card
-This is needed otherwise ssh will not be avalible out of the box.
+3. After the burning process, create a file called `ssh` in the root of the boot drive of the SD Card, this is needed otherwise ssh will not be available  out of the box.
 4. Setting up K3s. Because of hardware limitation at the time of writing this I'm going to use one Raspberry Pi 3b for this project.
 This single Pi will serve as both the server node as the agent node.
 5. Run the installation of k3s `curl -sfL https://get.k3s.io | sh -`
