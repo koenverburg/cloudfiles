@@ -1,4 +1,4 @@
-name: ci
+name: Docker To Image (iso)
 
 on:
   push:
