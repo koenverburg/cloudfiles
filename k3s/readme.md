@@ -91,3 +91,8 @@ spec:
 You should see `Welcome to nginx!`.
 > _NOTE: `nginx-test-deployment-7797df98f5-nhl95` is the name of my pod your name will differ_
 
+20. To delete a pod we can run, this will terminate that specific pod
+`kubectl delete -n default pod nginx-test-deployment-7797df98f5-nhl95`
+
+21. Removing the complete deployment we need to run
+`kubectl delete -n default deployment nginx-test-deployment`
