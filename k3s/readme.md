@@ -96,3 +96,7 @@ You should see `Welcome to nginx!`.
 
 21. Removing the complete deployment we need to run
 `kubectl delete -n default deployment nginx-test-deployment`
+
+
+22. Removing the K8s dashboard
+`kubectl delete -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.1.0/aio/deploy/recommended.yaml`
