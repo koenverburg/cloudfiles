@@ -1,0 +1,10 @@
+---
+- name: Neovim
+  become: yes
+  block:
+    - name: install stable neovim
+      apt:
+        state: present
+        update_cache: yes
+        name: 
+          - neovim
