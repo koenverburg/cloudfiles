@@ -1,0 +1,16 @@
+---
+- name: zsh
+  become: yes
+  block:
+
+    - name: install zsh
+      apt:
+        state: present
+        update_cache: yes
+        name: zsh
+
+    - name: install ohmyzsh  
+      shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+
+    - name: set zsh as default shell
+      shell: /bin/zsh
