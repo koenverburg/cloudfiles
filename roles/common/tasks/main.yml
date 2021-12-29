@@ -1,0 +1,26 @@
+---
+- name: common packages
+  become: yes
+  block:
+    - name: Ensure systemd is present
+      service:
+        name: sytemd
+        state: running
+        enabled: started
+      register: systemd
+
+    - name: set timezone to amsterdam
+      shell: timedatectl set-timezone Europe/Amsterdam
+      when: systemd.stat.exists
+
+    - name: Install packages
+      apt:
+        state: present
+        update_cache: yes
+        name: 
+          - curl
+          - make
+          - cmake
+          - tmux
+          # - ripgrep
+
