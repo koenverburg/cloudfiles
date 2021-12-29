@@ -1,0 +1,5 @@
+---
+- name: k3s
+  block:
+    - name: install k3s 
+      shell: curl -sfL https://get.k3s.io | sh -
