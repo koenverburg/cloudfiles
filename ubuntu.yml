@@ -1,0 +1,11 @@
+---
+- hosts: "*"
+  gather_facts: no
+
+- hosts: local
+  roles:
+    - role: common
+    - role: zsh
+    - role: neovim
+    - role: docker
+    # - role: k3s
