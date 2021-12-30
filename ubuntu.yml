@@ -1,6 +1,6 @@
 ---
 - hosts: "*"
-  gather_facts: no
+  gather_facts: yes
 
 - hosts: local
   roles:
@@ -8,4 +8,4 @@
     - role: zsh
     - role: neovim
     - role: docker
-    # - role: k3s
+    - role: k3s
