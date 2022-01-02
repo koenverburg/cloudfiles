@@ -1,11 +1,8 @@
 ---
-- hosts: "*"
-  gather_facts: yes
-
-- hosts: local
+- hosts: homelab
   roles:
     - role: common
     - role: zsh
     - role: neovim
-    - role: docker
+    # - role: docker
     - role: k3s
