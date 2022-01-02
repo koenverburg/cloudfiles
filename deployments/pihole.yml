@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pi-hole
+  labels:
+    app: pi-hole
+spec:
+  selector:
+    matchLabels:
+      app: pi-hole
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: pi-hole
+    spec:
+      containers:
+      - name: pi-hole
+        image: pi-hole/pi-hole
+        ports:
+          - containerPort: 80
