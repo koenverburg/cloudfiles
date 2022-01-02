@@ -9,8 +9,8 @@
         update_cache: yes
         name: zsh
 
-    - name: install ohmyzsh  
-      shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    # - name: install ohmyzsh  
+    #   shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
-    - name: set zsh as default shell
-      shell: /bin/zsh
+    # - name: set zsh as default shell
+    #   shell: /bin/zsh
