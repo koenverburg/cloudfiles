@@ -17,7 +17,7 @@ This single Pi will serve as both the server node as the agent node.
 7. Copy the contents of `sudo cat /etc/rancher/k3s/k3s.yaml` to `~/.kube/config` on your local machine
 8. On your local machine run `kubectl get nodes -o wide` and if all went well you should see your raspberry pi listed
 9. Let's install a ui to manage our cluster. By running the following command we can install the kubernetes dashboard
-`kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.1.0/aio/deploy/recommended.yaml`
+`kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.4.0/aio/deploy/recommended.yaml`
 _please note the version number in the url_
 10. Create a file called `dashboard.admin-user.yml` with the contents of
 

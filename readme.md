@@ -1,3 +1,4 @@
 # Cloudfiles
 
-A collection of files and scripts to create the cloud 
+A collection of files (ansible) and scripts to manage my Home Lab
+

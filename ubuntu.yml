@@ -1,0 +1,8 @@
+---
+- hosts: homelab
+  roles:
+    - role: common
+    - role: zsh
+    - role: neovim
+    # - role: docker
+    - role: k3s
