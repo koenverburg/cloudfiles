@@ -43,3 +43,17 @@ Create a pod named `httpd` with `httpd:alpine` and expose the port
 k run httpd --image=httpd:alpine --port=80
 k expose pod httpd --port=80 --name httpd
 ```
+ConfigMaps
+```bash
+k get configmaps
+# or
+k get cm # -n <namespace>
+k describe cm <name>
+k create cm webapp-config-map --from-env-file=./webapp.env
+```
+
+```ini
+APP_COLOR=darkblue
+```
+
+
