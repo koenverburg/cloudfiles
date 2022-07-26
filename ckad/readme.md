@@ -43,6 +43,7 @@ Create a pod named `httpd` with `httpd:alpine` and expose the port
 k run httpd --image=httpd:alpine --port=80
 k expose pod httpd --port=80 --name httpd
 ```
+
 ConfigMaps
 ```bash
 k get configmaps
@@ -56,4 +57,24 @@ k create cm webapp-config-map --from-env-file=./webapp.env
 APP_COLOR=darkblue
 ```
 
+Service Accounts
+
+```
+k create serviceaccount <name>
+k get serviceaccount
+k get sa
+k describe sa <name>
+```
+
+Service Account adding to Pod, note that your have to delete the pod if you make changes to the service account
+```
+spec:
+  serviceAccountName: <name>
+```
+
+disabling the defaulte service account on a pod using
+```
+spec:
+  automountServiceAccountToken: false
+```
 
