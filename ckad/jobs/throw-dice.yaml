@@ -1,0 +1,14 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: throw-dice-job
+spec:
+  backoffLimit: 6
+  parallelism: 3
+  completions: 3 # here we are specifing the amount of times the job need to run sucessful
+  template:
+    spec:
+      containers:
+        -  image: kodekloud/throw-dice
+           name: throw-dice
+      restartPolicy: OnFailure

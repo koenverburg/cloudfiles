@@ -84,3 +84,11 @@ taints
 ```bash
 kubectl taint nodes controlplane node-role.kubernetes.io/control-plane=:NoSchedule-
 ```
+
+Rolling deployments
+Setting there is an active deployment set to RollingUpdates, we need to update the image
+```bash
+k set image deployment/<name> <pod>=<new image>
+```
+
+
