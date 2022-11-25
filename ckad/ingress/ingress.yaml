@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-myapp-links
+spec:
+  rules:
+    - host: koenverburg.dev
+      http:
+        paths:
+        - backend:
+            service:
+              name: main-service
+              port:
+                number: 80
+
+    - host: links.koenverburg.dev
+      http:
+        paths:
+        - backend:
+            service:
+              name: links-service 
+              port:
+                number: 80
+
+    - host: kit.koenverburg.dev
+      http:
+        paths:
+        - backend:
+            service:
+              name: kit-service 
+              port:
+                number: 80
+

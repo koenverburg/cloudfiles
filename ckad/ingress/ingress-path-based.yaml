@@ -1,0 +1,22 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ingress-myapp-links
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            backend:
+              serviceName: main-service
+              servicePort: 80
+
+          - path: /links
+            backend:
+              serviceName: links-service
+              servicePort: 80
+
+          - path: /kit
+            backend:
+              serviceName: kit-service
+              servicePort: 80
