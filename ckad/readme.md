@@ -3,6 +3,9 @@ Get all images of all running pods
 kubectl get pods -o jsonpath="{.items[*].spec.containers[*].image}"
 ```
 
+Replace in place
+`kubectl get pod <pod_name> -n <namespace> -o yaml | kubectl replace --force -f -`
+
 Removal
 ```bash
 kubectl delete -n <NS> <service> acme
