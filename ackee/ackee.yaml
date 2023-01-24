@@ -38,7 +38,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ackee
+  name: ackee-svc
   labels:
     app: ackee
 spec:
@@ -71,6 +71,6 @@ spec:
             pathType: Exact
             backend:
               service:
-                name: ackee
+                name: ackee-svc
                 port:
                   number: 80

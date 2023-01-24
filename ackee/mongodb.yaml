@@ -26,7 +26,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ackee-mongo
+  name: ackee-mongo-svc
   labels:
     app: ackee
 spec:
@@ -68,9 +68,13 @@ spec:
         - name: "ackee-mongo-path"
           mountPath: "/data/db"
       env:
+        - name: MONGO_USERNAME
+          value: "admin"
+        - name: MONGO_PASSWORD
+          value: "password"
+
         - name: MONGODB_USERNAME
           value: "admin"
-
         - name: MONGODB_PASSWORD
           value: "password"
   volumes:
