@@ -68,6 +68,13 @@ spec:
         - name: "ackee-mongo-path"
           mountPath: "/data/db"
       env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: admin
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: password
+        - name: MONGO_INITDB_DATABASE
+          value: ackee
+
         - name: MONGO_USERNAME
           value: "admin"
         - name: MONGO_PASSWORD
