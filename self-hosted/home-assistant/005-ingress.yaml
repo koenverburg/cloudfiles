@@ -13,8 +13,3 @@ spec:
       services:
         - name: homeassistant
           port: 8123
-    # - kind: Rule
-    #   match: Host(`10.0.0.10`)
-    #   services:
-    #     - name: homeassistant
-    #       port: 8123
