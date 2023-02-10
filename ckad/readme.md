@@ -94,4 +94,13 @@ Setting there is an active deployment set to RollingUpdates, we need to update t
 k set image deployment/<name> <pod>=<new image>
 ```
 
+Get enabled admission plugins
+```bash
+kubectl exec kube-apiserver-controlplane -n kube-system -- kube-apiserver -h | grep enable-admission-plugins
+```
+Add new admission plugins
+```bash
+kubectl exec kube-apiserver-controlplane -n kube-system -- kube-apiserver --enable-admission-plugins=NamespaceAutoProvision --service-account-issuer=https://kubernetes.default.svc.cluster.local --service-account-key-file=/etc/kubernetes/pki/sa.pub --service-account-signing-key-file=/etc/kubernetes/pki/sa.key --etcd-servers=https://127.0.0.1:2379
+```
+
 
