@@ -1,0 +1,39 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: homeassistant
+  namespace: homeassistant
+  labels:
+    app: homeassistant
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: homeassistant
+  template:
+    metadata:
+      labels:
+        app: homeassistant
+    spec:
+      volumes:
+        - name: home-assistant-local-volume
+          persistentVolumeClaim:
+            claimName: home-assistant-local-claim
+      containers:
+        - name: raspberrypi3-homeassistant
+          image: 'homeassistant/raspberrypi3-homeassistant:stable'
+          resources:
+            limits:
+              cpu: 350m
+              memory: 500Mi
+          ports:
+            - name: http
+              containerPort: 8123
+              protocol: TCP
+          volumeMounts:
+            - name: home-assistant-local-volume
+              mountPath: "/config"
+          imagePullPolicy: Always
+          securityContext:
+            privileged: true

@@ -1,0 +1,79 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: umami
+  namespace: koenverburg
+spec:
+  ports:
+  - port: 3000
+    name: web
+  selector:
+    app: umami
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: umami
+  namespace: koenverburg
+spec:
+  selector:
+    matchLabels:
+      app: umami
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: umami
+    spec:
+      containers:
+      - name: umami
+        image: docker.umami.dev/umami-software/umami:postgresql-latest
+        ports:
+        - containerPort: 3000
+          name: umami
+        env:
+
+        - name: DISABLE_TELEMETRY
+          value: "1"
+
+        - name: DATABASE_TYPE
+          value: postgresql
+
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: umami-config
+              key: database-url
+        - name: HASH_SALT
+          valueFrom:
+            secretKeyRef:
+              name: umami-config
+              key: hash-salt
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: umami
+  namespace: koenverburg
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: 'letsencrypt'
+spec:
+  # tls:
+  # - hosts:
+  #   - umami.<yourdomain>.io
+  #   secretName: umami-certs
+  rules:
+  - host: umami-koenverburg.cloud.okteto.net
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: umami
+            port:
+              number: 3000
