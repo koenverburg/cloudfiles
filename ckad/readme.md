@@ -103,4 +103,55 @@ Add new admission plugins
 kubectl exec kube-apiserver-controlplane -n kube-system -- kube-apiserver --enable-admission-plugins=NamespaceAutoProvision --service-account-issuer=https://kubernetes.default.svc.cluster.local --service-account-key-file=/etc/kubernetes/pki/sa.pub --service-account-signing-key-file=/etc/kubernetes/pki/sa.key --etcd-servers=https://127.0.0.1:2379
 ```
 
+To edit the kube api server use this command, it will restart after editing
+```bash
+vim /etc/kubernetes/manifests/kube-apiserver.yaml
+# nvim /etc/kubernetes/manifests/kube-apiserver.yaml
+```
+
+#### Validating and Mutating Admission Controllers
+
+```yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: "pod-policy.example.com"
+webhooks:
+- name: "pod-policy.example.com"
+  clientConfig:
+    service:
+      name: "webhook-service"
+      namespace: "webhook-namescape"
+    caBundle: ""
+  rules:
+  - apiGroups:  [""]
+    apiVersions: ["v1"]
+    operations: ["CREATE"]
+    resources: ["pods"]
+    scope: "NameSpaced"
+```
+
+```bash
+kubectl create secret generic webhook-server-tls --from-file=Certificate=/root/keys/webhook-server-tls.crt --from-file=Key=/root/keys/webhook-server-tls.key
+```
+
+Admission controllers mutate first and then they validate
+
+Create a tls secret
+```bash
+kubectl -n <ns> create secret tls <name> \
+  --cert "/root/keys/webhook.crt"  \
+  --key "/root/keys/webhook.key"
+```
+
+In previous steps we have deployed demo webhook which does below
+
+- Denies all request for pod to run as root in container if no securityContext is provided.
+
+- If no value is set for runAsNonRoot, a default of true is applied, and the user ID defaults to 1234
+
+- Allow to run containers as root if runAsNonRoot set explicitly to false in the securityContext
+
+
+In next steps we have added some pod definitions file for each scenario. Deploy those pods with existing definitions file and validate the behaviour of our webhook
 
