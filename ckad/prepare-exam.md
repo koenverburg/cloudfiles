@@ -10,8 +10,14 @@
 - rg - ripgrep
 - fzf
 
-## Repository's
+## Quick Note's
+Helm
+- adding a repo `helm repo add <name> <link>`
+- search hub `helm search hub <name>`
+- repo hub `helm search repo <name>`
+- install chart `helm install bravo bitnami/drupal` `helm install <release-name> <chart name>`
 
+## Repository's
 - add-apt-repository https://launchpad.net/~neovim-ppa/+archive/ubuntu/stable
 
 ## prepare env

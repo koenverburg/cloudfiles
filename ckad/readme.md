@@ -155,3 +155,21 @@ In previous steps we have deployed demo webhook which does below
 
 In next steps we have added some pod definitions file for each scenario. Deploy those pods with existing definitions file and validate the behaviour of our webhook
 
+---
+## Killer.sh
+
+Curl using nginx
+`k run tmp --restart=Never --rm -i --image=nginx:alpine -- curl -m 5 <ip>`
+
+Or using busybox and wget
+`k run tmp --restart=Never --rm -i --image=busybox -- wget -O- <ip>`
+
+Create a new Deployment with the name Sunny with 4 replicas of Nginx in the namespace Sun.
+
+For a faster creation of a definition file and using the above context
+`k -n sun create deployment sunny --image=nginx:1.17.3-alpine --dry-run="client" -o yaml > p2_sunny.yaml`
+
+Use `expose` instead of `create service clusterip`
+
+To expose the deployment of sunny we use
+`k -n sun expose deployment sunny --name sun-srv --port 9999 --target-port 80`
