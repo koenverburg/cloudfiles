@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ollama-local
+  namespace: ai
+  labels:
+    app: ollama-local
+spec:
+  containers:
+    - name: ollama-local
+      image: ollama/ollama
+      resources:
+        # limits:
+        #   memory: "200Mi"
+        # requests:
+        #   memory: "100Mi"
+      ports:
+        - containerPort: 11434
+      volumeMounts:
+        - name: storage
+          mountPath: /root/.ollama
+  volumes:
+    - name: storage
+      hostPath:
+        path: /home/conrad/containers/ollama
+        type: Directory
