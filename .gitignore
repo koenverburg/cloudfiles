@@ -1,5 +1,0 @@
-*.tfvars
-selections.json
-.terraform
-jenkins/jenkins_home
-storage
