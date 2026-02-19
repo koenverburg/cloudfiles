@@ -1,0 +1,271 @@
+---
+- name: Setup Control Plane with Nomad and Consul servers
+  hosts: all
+  vars:
+    consul_version: "1.17.1"
+    nomad_version: "1.7.3"
+    arch: "{{ 'arm64' if ansible_architecture == 'arm64' else 'amd64' }}"
+    os: "{{ 'darwin' if ansible_system == 'Darwin' else 'linux' }}"
+    user_home: "{{ ansible_env.HOME }}"
+    
+  tasks:
+    - name: Create directories for Consul
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/consul
+        - /etc/consul.d
+        - /opt/consul/data
+      become: yes
+
+    - name: Create directories for Nomad
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/nomad
+        - /etc/nomad.d
+        - /opt/nomad/data
+      become: yes
+
+    - name: Download Consul
+      get_url:
+        url: "https://releases.hashicorp.com/consul/{{ consul_version }}/consul_{{ consul_version }}_{{ os }}_{{ arch }}.zip"
+        dest: /tmp/consul.zip
+        mode: '0644'
+
+    - name: Install unzip (Ubuntu)
+      apt:
+        name: unzip
+        state: present
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Install unzip (macOS)
+      community.general.homebrew:
+        name: unzip
+        state: present
+      when: ansible_system == "Darwin"
+
+    - name: Unzip Consul
+      unarchive:
+        src: /tmp/consul.zip
+        dest: /opt/consul
+        remote_src: yes
+      become: yes
+
+    - name: Create Consul symlink
+      file:
+        src: /opt/consul/consul
+        dest: /usr/local/bin/consul
+        state: link
+      become: yes
+
+    - name: Download Nomad
+      get_url:
+        url: "https://releases.hashicorp.com/nomad/{{ nomad_version }}/nomad_{{ nomad_version }}_{{ os }}_{{ arch }}.zip"
+        dest: /tmp/nomad.zip
+        mode: '0644'
+
+    - name: Unzip Nomad
+      unarchive:
+        src: /tmp/nomad.zip
+        dest: /opt/nomad
+        remote_src: yes
+      become: yes
+
+    - name: Create Nomad symlink
+      file:
+        src: /opt/nomad/nomad
+        dest: /usr/local/bin/nomad
+        state: link
+      become: yes
+
+    - name: Create Consul server configuration
+      copy:
+        content: |
+          datacenter = "dc1"
+          data_dir = "/opt/consul/data"
+          server = true
+          bootstrap_expect = 1
+          ui_config {
+            enabled = true
+          }
+          client_addr = "0.0.0.0"
+          bind_addr = "{{ '{{ GetInterfaceIP \"en0\" }}' if ansible_system == 'Darwin' else '{{ GetPrivateInterfaces | attr \"address\" }}' }}"
+          advertise_addr = "{{ '{{ GetInterfaceIP \"en0\" }}' if ansible_system == 'Darwin' else '{{ GetPrivateInterfaces | attr \"address\" }}' }}"
+        dest: /etc/consul.d/consul.hcl
+        mode: '0644'
+      become: yes
+
+    - name: Create Nomad server configuration
+      copy:
+        content: |
+          datacenter = "dc1"
+          data_dir = "/opt/nomad/data"
+          
+          server {
+            enabled = true
+            bootstrap_expect = 1
+          }
+          
+          consul {
+            address = "127.0.0.1:8500"
+          }
+        dest: /etc/nomad.d/nomad.hcl
+        mode: '0644'
+      become: yes
+
+    - name: Create Consul systemd service (Ubuntu)
+      copy:
+        content: |
+          [Unit]
+          Description=Consul Server
+          Documentation=https://www.consul.io/
+          Requires=network-online.target
+          After=network-online.target
+          
+          [Service]
+          Type=notify
+          User=root
+          Group=root
+          ExecStart=/opt/consul/consul agent -config-dir=/etc/consul.d/
+          ExecReload=/bin/kill --signal HUP $MAINPID
+          KillMode=process
+          KillSignal=SIGTERM
+          Restart=on-failure
+          LimitNOFILE=65536
+          
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/consul.service
+        mode: '0644'
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Create Nomad systemd service (Ubuntu)
+      copy:
+        content: |
+          [Unit]
+          Description=Nomad Server
+          Documentation=https://www.nomadproject.io/
+          Requires=network-online.target
+          After=network-online.target consul.service
+          
+          [Service]
+          Type=notify
+          User=root
+          Group=root
+          ExecStart=/opt/nomad/nomad agent -config=/etc/nomad.d/nomad.hcl
+          ExecReload=/bin/kill --signal HUP $MAINPID
+          KillMode=process
+          KillSignal=SIGTERM
+          Restart=on-failure
+          LimitNOFILE=65536
+          
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/nomad.service
+        mode: '0644'
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Enable and start Consul service (Ubuntu)
+      systemd:
+        name: consul
+        enabled: yes
+        state: started
+        daemon_reload: yes
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Enable and start Nomad service (Ubuntu)
+      systemd:
+        name: nomad
+        enabled: yes
+        state: started
+        daemon_reload: yes
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Create launchd plist for Consul (macOS)
+      copy:
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+              <key>Label</key>
+              <string>com.hashicorp.consul</string>
+              <key>ProgramArguments</key>
+              <array>
+                <string>/opt/consul/consul</string>
+                <string>agent</string>
+                <string>-config-dir=/etc/consul.d/</string>
+              </array>
+              <key>RunAtLoad</key>
+              <true/>
+              <key>KeepAlive</key>
+              <true/>
+              <key>StandardOutPath</key>
+              <string>/var/log/consul.log</string>
+              <key>StandardErrorPath</key>
+              <string>/var/log/consul.err</string>
+            </dict>
+          </plist>
+        dest: /Library/LaunchDaemons/com.hashicorp.consul.plist
+        mode: '0644'
+      when: ansible_system == "Darwin"
+      become: yes
+
+    - name: Create launchd plist for Nomad (macOS)
+      copy:
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+              <key>Label</key>
+              <string>com.hashicorp.nomad</string>
+              <key>ProgramArguments</key>
+              <array>
+                <string>/opt/nomad/nomad</string>
+                <string>agent</string>
+                <string>-config=/etc/nomad.d/nomad.hcl</string>
+              </array>
+              <key>RunAtLoad</key>
+              <true/>
+              <key>KeepAlive</key>
+              <true/>
+              <key>StandardOutPath</key>
+              <string>/var/log/nomad.log</string>
+              <key>StandardErrorPath</key>
+              <string>/var/log/nomad.err</string>
+            </dict>
+          </plist>
+        dest: /Library/LaunchDaemons/com.hashicorp.nomad.plist
+        mode: '0644'
+      when: ansible_system == "Darwin"
+      become: yes
+
+    - name: Load and start Consul service (macOS)
+      shell: launchctl load /Library/LaunchDaemons/com.hashicorp.consul.plist
+      when: ansible_system == "Darwin"
+      become: yes
+      ignore_errors: yes
+
+    - name: Load and start Nomad service (macOS)
+      shell: launchctl load /Library/LaunchDaemons/com.hashicorp.nomad.plist
+      when: ansible_system == "Darwin"
+      become: yes
+      ignore_errors: yes
+
+    - name: Display success message
+      debug:
+        msg: |
+          Control Plane setup complete!
+          - Consul server running on port 8500 (UI: http://localhost:8500)
+          - Nomad server running on port 4646 (UI: http://localhost:4646)
