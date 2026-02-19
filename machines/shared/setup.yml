@@ -115,7 +115,7 @@
         executable: /bin/bash
         creates: "{{ cargo_home }}/bin/{{ item }}"
       loop:
-        - nushell
+        - nu
         - zellij
         - difftastic
         - mergiraf
