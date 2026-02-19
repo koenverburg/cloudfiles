@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'machines/worker-node/**'
-      - 'machines/shared/**'
-      - '.github/workflows/deploy-worker-node.yml'
   workflow_dispatch:
     inputs:
       control_plane_host:
@@ -19,7 +15,11 @@ on:
 jobs:
   deploy:
     name: Deploy Worker Node
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    if: contains(github.event.head_commit.message, '#start-ci')
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     
     steps:
       - name: Checkout code
@@ -60,6 +60,6 @@ jobs:
 
       - name: Display access information
         run: |
-          echo "✅ Worker Node deployed successfully on GitHub Actions runner!"
+          echo "Worker Node deployed successfully on ${{ matrix.os }}!"
           echo "Connected to Control Plane: ${{ inputs.control_plane_host || '127.0.0.1' }}"
           echo "Note: Services are running on the GitHub Actions runner"

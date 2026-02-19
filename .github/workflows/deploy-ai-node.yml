@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'machines/ai-node/**'
-      - 'machines/shared/**'
-      - '.github/workflows/deploy-ai-node.yml'
   workflow_dispatch:
     inputs:
       control_plane_host:
@@ -24,7 +20,11 @@ on:
 jobs:
   deploy:
     name: Deploy AI Node
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    if: contains(github.event.head_commit.message, '#start-ci')
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     
     steps:
       - name: Checkout code
@@ -75,7 +75,7 @@ jobs:
 
       - name: Display access information
         run: |
-          echo "✅ AI Node deployed successfully on GitHub Actions runner!"
+          echo "AI Node deployed successfully on ${{ matrix.os }}!"
           echo "Connected to Control Plane: ${{ inputs.control_plane_host || '127.0.0.1' }}"
           echo "Ollama API: http://localhost:11434"
           if [ -n "${{ inputs.ollama_models }}" ]; then
