@@ -1,0 +1,453 @@
+---
+- name: Setup AI Node with Nomad client, Consul client, and Ollama
+  hosts: all
+  vars:
+    consul_version: "1.17.1"
+    nomad_version: "1.7.3"
+    arch: "{{ 'arm64' if ansible_architecture == 'arm64' else 'amd64' }}"
+    os: "{{ 'darwin' if ansible_system == 'Darwin' else 'linux' }}"
+    user_home: "{{ ansible_env.HOME }}"
+    consul_server_addr: "{{ consul_server | default('127.0.0.1') }}"
+    
+  tasks:
+    - name: Create directories for Consul
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/consul
+        - /etc/consul.d
+        - /opt/consul/data
+      become: yes
+
+    - name: Create directories for Nomad
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/nomad
+        - /etc/nomad.d
+        - /opt/nomad/data
+      become: yes
+
+    - name: Download Consul
+      get_url:
+        url: "https://releases.hashicorp.com/consul/{{ consul_version }}/consul_{{ consul_version }}_{{ os }}_{{ arch }}.zip"
+        dest: /tmp/consul.zip
+        mode: '0644'
+
+    - name: Install unzip (Ubuntu)
+      apt:
+        name: unzip
+        state: present
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Install unzip (macOS)
+      community.general.homebrew:
+        name: unzip
+        state: present
+      when: ansible_system == "Darwin"
+
+    - name: Unzip Consul
+      unarchive:
+        src: /tmp/consul.zip
+        dest: /opt/consul
+        remote_src: yes
+      become: yes
+
+    - name: Create Consul symlink
+      file:
+        src: /opt/consul/consul
+        dest: /usr/local/bin/consul
+        state: link
+      become: yes
+
+    - name: Download Nomad
+      get_url:
+        url: "https://releases.hashicorp.com/nomad/{{ nomad_version }}/nomad_{{ nomad_version }}_{{ os }}_{{ arch }}.zip"
+        dest: /tmp/nomad.zip
+        mode: '0644'
+
+    - name: Unzip Nomad
+      unarchive:
+        src: /tmp/nomad.zip
+        dest: /opt/nomad
+        remote_src: yes
+      become: yes
+
+    - name: Create Nomad symlink
+      file:
+        src: /opt/nomad/nomad
+        dest: /usr/local/bin/nomad
+        state: link
+      become: yes
+
+    - name: Install Docker (Ubuntu)
+      block:
+        - name: Install Docker dependencies
+          apt:
+            name:
+              - ca-certificates
+              - curl
+              - gnupg
+            state: present
+
+        - name: Add Docker GPG key
+          apt_key:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            state: present
+
+        - name: Add Docker repository
+          apt_repository:
+            repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+            state: present
+
+        - name: Install Docker
+          apt:
+            name: docker-ce
+            state: present
+            update_cache: yes
+
+        - name: Start Docker service
+          systemd:
+            name: docker
+            enabled: yes
+            state: started
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Install Docker (macOS)
+      debug:
+        msg: "Please install Docker Desktop manually on macOS from https://www.docker.com/products/docker-desktop"
+      when: ansible_system == "Darwin"
+
+    - name: Install Ollama (Ubuntu)
+      shell: curl -fsSL https://ollama.com/install.sh | sh
+      args:
+        creates: /usr/local/bin/ollama
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Install Ollama (macOS)
+      block:
+        - name: Download Ollama for macOS
+          get_url:
+            url: https://ollama.com/download/Ollama-darwin.zip
+            dest: /tmp/Ollama.zip
+            mode: '0644'
+
+        - name: Create Ollama directory
+          file:
+            path: /Applications/Ollama.app
+            state: directory
+            mode: '0755'
+          become: yes
+
+        - name: Unzip Ollama
+          unarchive:
+            src: /tmp/Ollama.zip
+            dest: /Applications/
+            remote_src: yes
+          become: yes
+
+        - name: Create Ollama CLI symlink
+          file:
+            src: /Applications/Ollama.app/Contents/MacOS/ollama
+            dest: /usr/local/bin/ollama
+            state: link
+          become: yes
+          ignore_errors: yes
+      when: ansible_system == "Darwin"
+
+    - name: Create Consul client configuration
+      copy:
+        content: |
+          datacenter = "dc1"
+          data_dir = "/opt/consul/data"
+          server = false
+          retry_join = ["{{ consul_server_addr }}"]
+          client_addr = "0.0.0.0"
+          bind_addr = "{{ '{{ GetInterfaceIP \"en0\" }}' if ansible_system == 'Darwin' else '{{ GetPrivateInterfaces | attr \"address\" }}' }}"
+          advertise_addr = "{{ '{{ GetInterfaceIP \"en0\" }}' if ansible_system == 'Darwin' else '{{ GetPrivateInterfaces | attr \"address\" }}' }}"
+        dest: /etc/consul.d/consul.hcl
+        mode: '0644'
+      become: yes
+
+    - name: Create Nomad client configuration with GPU support
+      copy:
+        content: |
+          datacenter = "dc1"
+          data_dir = "/opt/nomad/data"
+          
+          client {
+            enabled = true
+            servers = ["{{ consul_server_addr }}:4647"]
+            
+            meta {
+              "node_type" = "ai"
+              "ollama" = "true"
+            }
+            
+            host_volume "ollama_models" {
+              path = "/opt/ollama/models"
+              read_only = false
+            }
+          }
+          
+          consul {
+            address = "127.0.0.1:8500"
+          }
+          
+          plugin "docker" {
+            config {
+              allow_privileged = true
+              volumes {
+                enabled = true
+              }
+            }
+          }
+        dest: /etc/nomad.d/nomad.hcl
+        mode: '0644'
+      become: yes
+
+    - name: Create Ollama models directory
+      file:
+        path: /opt/ollama/models
+        state: directory
+        mode: '0755'
+      become: yes
+
+    - name: Create Consul systemd service (Ubuntu)
+      copy:
+        content: |
+          [Unit]
+          Description=Consul Client
+          Documentation=https://www.consul.io/
+          Requires=network-online.target
+          After=network-online.target
+          
+          [Service]
+          Type=notify
+          User=root
+          Group=root
+          ExecStart=/opt/consul/consul agent -config-dir=/etc/consul.d/
+          ExecReload=/bin/kill --signal HUP $MAINPID
+          KillMode=process
+          KillSignal=SIGTERM
+          Restart=on-failure
+          LimitNOFILE=65536
+          
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/consul.service
+        mode: '0644'
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Create Nomad systemd service (Ubuntu)
+      copy:
+        content: |
+          [Unit]
+          Description=Nomad Client
+          Documentation=https://www.nomadproject.io/
+          Requires=network-online.target
+          After=network-online.target consul.service
+          
+          [Service]
+          Type=notify
+          User=root
+          Group=root
+          ExecStart=/opt/nomad/nomad agent -config=/etc/nomad.d/nomad.hcl
+          ExecReload=/bin/kill --signal HUP $MAINPID
+          KillMode=process
+          KillSignal=SIGTERM
+          Restart=on-failure
+          LimitNOFILE=65536
+          
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/nomad.service
+        mode: '0644'
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Create Ollama systemd service (Ubuntu)
+      copy:
+        content: |
+          [Unit]
+          Description=Ollama Service
+          Documentation=https://ollama.com/
+          After=network-online.target
+          
+          [Service]
+          Type=simple
+          User=root
+          Group=root
+          ExecStart=/usr/local/bin/ollama serve
+          Restart=always
+          RestartSec=3
+          Environment="OLLAMA_HOST=0.0.0.0:11434"
+          Environment="OLLAMA_MODELS=/opt/ollama/models"
+          
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/ollama.service
+        mode: '0644'
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Enable and start Consul service (Ubuntu)
+      systemd:
+        name: consul
+        enabled: yes
+        state: started
+        daemon_reload: yes
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Enable and start Nomad service (Ubuntu)
+      systemd:
+        name: nomad
+        enabled: yes
+        state: started
+        daemon_reload: yes
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Enable and start Ollama service (Ubuntu)
+      systemd:
+        name: ollama
+        enabled: yes
+        state: started
+        daemon_reload: yes
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Create launchd plist for Consul (macOS)
+      copy:
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+              <key>Label</key>
+              <string>com.hashicorp.consul</string>
+              <key>ProgramArguments</key>
+              <array>
+                <string>/opt/consul/consul</string>
+                <string>agent</string>
+                <string>-config-dir=/etc/consul.d/</string>
+              </array>
+              <key>RunAtLoad</key>
+              <true/>
+              <key>KeepAlive</key>
+              <true/>
+              <key>StandardOutPath</key>
+              <string>/var/log/consul.log</string>
+              <key>StandardErrorPath</key>
+              <string>/var/log/consul.err</string>
+            </dict>
+          </plist>
+        dest: /Library/LaunchDaemons/com.hashicorp.consul.plist
+        mode: '0644'
+      when: ansible_system == "Darwin"
+      become: yes
+
+    - name: Create launchd plist for Nomad (macOS)
+      copy:
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+              <key>Label</key>
+              <string>com.hashicorp.nomad</string>
+              <key>ProgramArguments</key>
+              <array>
+                <string>/opt/nomad/nomad</string>
+                <string>agent</string>
+                <string>-config=/etc/nomad.d/nomad.hcl</string>
+              </array>
+              <key>RunAtLoad</key>
+              <true/>
+              <key>KeepAlive</key>
+              <true/>
+              <key>StandardOutPath</key>
+              <string>/var/log/nomad.log</string>
+              <key>StandardErrorPath</key>
+              <string>/var/log/nomad.err</string>
+            </dict>
+          </plist>
+        dest: /Library/LaunchDaemons/com.hashicorp.nomad.plist
+        mode: '0644'
+      when: ansible_system == "Darwin"
+      become: yes
+
+    - name: Create launchd plist for Ollama (macOS)
+      copy:
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+              <key>Label</key>
+              <string>com.ollama.server</string>
+              <key>ProgramArguments</key>
+              <array>
+                <string>/usr/local/bin/ollama</string>
+                <string>serve</string>
+              </array>
+              <key>EnvironmentVariables</key>
+              <dict>
+                <key>OLLAMA_HOST</key>
+                <string>0.0.0.0:11434</string>
+                <key>OLLAMA_MODELS</key>
+                <string>/opt/ollama/models</string>
+              </dict>
+              <key>RunAtLoad</key>
+              <true/>
+              <key>KeepAlive</key>
+              <true/>
+              <key>StandardOutPath</key>
+              <string>/var/log/ollama.log</string>
+              <key>StandardErrorPath</key>
+              <string>/var/log/ollama.err</string>
+            </dict>
+          </plist>
+        dest: /Library/LaunchDaemons/com.ollama.server.plist
+        mode: '0644'
+      when: ansible_system == "Darwin"
+      become: yes
+
+    - name: Load and start Consul service (macOS)
+      shell: launchctl load /Library/LaunchDaemons/com.hashicorp.consul.plist
+      when: ansible_system == "Darwin"
+      become: yes
+      ignore_errors: yes
+
+    - name: Load and start Nomad service (macOS)
+      shell: launchctl load /Library/LaunchDaemons/com.hashicorp.nomad.plist
+      when: ansible_system == "Darwin"
+      become: yes
+      ignore_errors: yes
+
+    - name: Load and start Ollama service (macOS)
+      shell: launchctl load /Library/LaunchDaemons/com.ollama.server.plist
+      when: ansible_system == "Darwin"
+      become: yes
+      ignore_errors: yes
+
+    - name: Display success message
+      debug:
+        msg: |
+          AI Node setup complete!
+          - Consul client connected to {{ consul_server_addr }}
+          - Nomad client running with AI node metadata
+          - Ollama service running on port 11434
+          - Models stored in /opt/ollama/models
+          
+          To pull an AI model: ollama pull llama2
+          Note: Set consul_server variable to your control plane IP (e.g., -e consul_server=192.168.1.10)

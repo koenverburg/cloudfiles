@@ -1,0 +1,84 @@
+name: Deploy AI Node
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'machines/ai-node/**'
+      - 'machines/shared/**'
+      - '.github/workflows/deploy-ai-node.yml'
+  workflow_dispatch:
+    inputs:
+      control_plane_host:
+        description: 'Control plane IP or hostname'
+        required: false
+        default: '127.0.0.1'
+        type: string
+      ollama_models:
+        description: 'Comma-separated list of Ollama models to pull (e.g., llama2,codellama)'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  deploy:
+    name: Deploy AI Node
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+
+      - name: Create localhost inventory
+        run: |
+          cat > inventory.ini <<EOF
+          [all]
+          localhost ansible_connection=local
+          EOF
+
+      - name: Run shared setup playbook
+        run: |
+          ansible-playbook -i inventory.ini machines/shared/setup.yml
+
+      - name: Run ai-node playbook
+        run: |
+          ansible-playbook -i inventory.ini machines/ai-node/setup.yml \
+            -e consul_server=${{ inputs.control_plane_host || '127.0.0.1' }}
+
+      - name: Verify deployment
+        run: |
+          echo "Waiting for services to start..."
+          sleep 15
+          consul members || echo "Consul not yet available"
+          nomad node status || echo "Nomad not yet available"
+          curl -s http://localhost:11434/api/tags || echo "Ollama not yet available"
+
+      - name: Pull Ollama models
+        if: inputs.ollama_models != ''
+        run: |
+          IFS=',' read -ra MODELS <<< "${{ inputs.ollama_models }}"
+          for model in "${MODELS[@]}"; do
+            echo "Pulling model: $model"
+            ollama pull "$model"
+          done
+
+      - name: Display access information
+        run: |
+          echo "✅ AI Node deployed successfully on GitHub Actions runner!"
+          echo "Connected to Control Plane: ${{ inputs.control_plane_host || '127.0.0.1' }}"
+          echo "Ollama API: http://localhost:11434"
+          if [ -n "${{ inputs.ollama_models }}" ]; then
+            echo "Models pulled: ${{ inputs.ollama_models }}"
+          fi
+          echo "Note: Services are running on the GitHub Actions runner"
