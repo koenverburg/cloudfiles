@@ -1,0 +1,138 @@
+---
+- name: Setup development environment with Go, Rust, and tools
+  hosts: all
+  vars:
+    user_home: "{{ ansible_env.HOME }}"
+    cargo_home: "{{ ansible_env.HOME }}/.cargo"
+    rustup_home: "{{ ansible_env.HOME }}/.rustup"
+    go_version: "1.22.0"
+    go_arch: "{{ 'darwin-arm64' if (ansible_system == 'Darwin' and ansible_architecture == 'arm64') else ('darwin-amd64' if ansible_system == 'Darwin' else 'linux-amd64') }}"
+  tasks:
+    - name: Detect if running as root
+      set_fact:
+        is_root: "{{ ansible_user_id == 'root' }}"
+        target_user: "{{ ansible_user_id if ansible_user_id != 'root' else ansible_env.SUDO_USER | default(ansible_user_id) }}"
+
+    - name: Update package cache (Ubuntu)
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Install dependencies (Ubuntu)
+      apt:
+        name:
+          - curl
+          - git
+          - build-essential
+        state: present
+      when: ansible_distribution == "Ubuntu"
+      become: yes
+
+    - name: Install Homebrew dependencies (macOS)
+      community.general.homebrew:
+        name:
+          - curl
+          - git
+        state: present
+      when: ansible_system == "Darwin"
+
+    - name: Download and install Go
+      block:
+        - name: Download Go tarball
+          get_url:
+            url: "https://go.dev/dl/go{{ go_version }}.{{ go_arch }}.tar.gz"
+            dest: /tmp/go.tar.gz
+            mode: '0644'
+
+        - name: Remove existing Go installation
+          file:
+            path: /usr/local/go
+            state: absent
+          become: yes
+
+        - name: Extract Go tarball
+          unarchive:
+            src: /tmp/go.tar.gz
+            dest: /usr/local
+            remote_src: yes
+          become: yes
+
+        - name: Add Go to PATH in profile (Linux)
+          lineinfile:
+            path: "{{ user_home }}/.profile"
+            line: 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin'
+            create: yes
+            mode: '0644'
+          when: ansible_system == "Linux"
+
+        - name: Add Go to PATH in profile (macOS)
+          lineinfile:
+            path: "{{ user_home }}/.zprofile"
+            line: 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin'
+            create: yes
+            mode: '0644'
+          when: ansible_system == "Darwin"
+
+    - name: Install Rust using rustup
+      block:
+        - name: Download rustup installer
+          get_url:
+            url: https://sh.rustup.rs
+            dest: /tmp/rustup-init.sh
+            mode: '0755'
+
+        - name: Run rustup installer
+          shell: /tmp/rustup-init.sh -y
+          args:
+            creates: "{{ cargo_home }}/bin/rustc"
+          environment:
+            CARGO_HOME: "{{ cargo_home }}"
+            RUSTUP_HOME: "{{ rustup_home }}"
+
+        - name: Add cargo to PATH in profile (Linux)
+          lineinfile:
+            path: "{{ user_home }}/.profile"
+            line: 'export PATH=$PATH:$HOME/.cargo/bin'
+            create: yes
+            mode: '0644'
+          when: ansible_system == "Linux"
+
+        - name: Add cargo to PATH in profile (macOS)
+          lineinfile:
+            path: "{{ user_home }}/.zprofile"
+            line: 'export PATH=$PATH:$HOME/.cargo/bin'
+            create: yes
+            mode: '0644'
+          when: ansible_system == "Darwin"
+
+    - name: Install cargo packages
+      shell: |
+        source {{ cargo_home }}/env
+        {{ cargo_home }}/bin/cargo install {{ item }}
+      args:
+        executable: /bin/bash
+        creates: "{{ cargo_home }}/bin/{{ item }}"
+      loop:
+        - nushell
+        - zellij
+        - difftastic
+        - mergiraf
+      environment:
+        CARGO_HOME: "{{ cargo_home }}"
+        RUSTUP_HOME: "{{ rustup_home }}"
+
+    - name: Install lazygit using Go
+      shell: |
+        export PATH=$PATH:/usr/local/go/bin
+        /usr/local/go/bin/go install github.com/jesseduffield/lazygit@latest
+      args:
+        executable: /bin/bash
+        creates: "{{ user_home }}/go/bin/lazygit"
+      environment:
+        GOPATH: "{{ user_home }}/go"
+
+    - name: Display installation success message
+      debug:
+        msg: "Development environment setup complete! Installed: Go, Rust, nushell, zellij, difftastic, mergiraf, and lazygit"
