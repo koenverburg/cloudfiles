@@ -110,15 +110,15 @@
     - name: Install cargo packages
       shell: |
         source {{ cargo_home }}/env
-        {{ cargo_home }}/bin/cargo install {{ item }}
+        {{ cargo_home }}/bin/cargo install {{ item.crate }}
       args:
         executable: /bin/bash
-        creates: "{{ cargo_home }}/bin/{{ item }}"
+        creates: "{{ cargo_home }}/bin/{{ item.binary }}"
       loop:
-        - nu
-        - zellij
-        - difftastic
-        - mergiraf
+        - { crate: "nu", binary: "nu" }
+        - { crate: "zellij", binary: "zellij" }
+        - { crate: "difftastic", binary: "difft" }
+        - { crate: "mergiraf", binary: "mergiraf" }
       environment:
         CARGO_HOME: "{{ cargo_home }}"
         RUSTUP_HOME: "{{ rustup_home }}"
