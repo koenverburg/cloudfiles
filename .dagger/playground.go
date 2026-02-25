@@ -48,11 +48,14 @@ func (m *Cloudfiles) playgroundContainer() *dagger.Container {
 				"/usr/local/bin:"+
 				"/usr/bin:/bin:/usr/sbin:/sbin").
 
-		WithExec([]string{"sh", "-c",
-			"fnm install v25",
-			// "fnm use v25",
-			// "npm install -g @mariozechner/pi-coding-agent",
-		}).
+		WithExec([]string{"sh", "-c", "cargo install moltis --git https://github.com/moltis-org/moltis"}).
+
+
+		// WithExec([]string{"sh", "-c",
+		// 	"fnm install v25",
+		// 	// "fnm use v25",
+		// 	// "npm install -g @mariozechner/pi-coding-agent",
+		// }).
 
 		WithWorkdir("/root")
 }
