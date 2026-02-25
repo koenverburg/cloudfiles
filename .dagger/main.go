@@ -131,3 +131,23 @@ func (m *Cloudfiles) AiNode(
 		}).
 		Stdout(ctx)
 }
+
+// Playground returns the fully-built debug/playground container image.
+//
+// Useful for chaining or interactive inspection:
+//
+//	dagger call playground terminal
+func (m *Cloudfiles) Playground() *dagger.Container {
+	return m.playgroundContainer()
+}
+
+// PlaygroundExport builds the playground container and exports it to the
+// host's local Docker image store under the given name.
+//
+// Usage:
+//
+//	dagger call playground-export
+//	docker run --rm -it --network host --name pg-debug-001 playground bash
+func (m *Cloudfiles) PlaygroundExec() *dagger.Container {
+	return m.playgroundContainer().Terminal()
+}
