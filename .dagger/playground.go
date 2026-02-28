@@ -10,8 +10,16 @@ func (m *Cloudfiles) playgroundContainer() *dagger.Container {
 			"apt-get update && " +
 				"apt-get install -y --no-install-recommends " +
 				"tmux jq git curl gnupg wget unzip xz-utils " +
-				"build-essential libudev-dev pkg-config libssl-dev ca-certificates && " +
-				"rm -rf /var/lib/apt/lists/*"}).
+				"build-essential make cmake gcc lua5.4 luajit " +
+				"libudev-dev pkg-config libssl-dev ca-certificates " +
+				"software-properties-common"}).
+
+		WithExec([]string{"sh", "-c", "apt-get install software-properties-common -y"}).
+		WithExec([]string{"sh", "-c", "add-apt-repository ppa:neovim-ppa/stable -y"}).
+		WithExec([]string{"sh", "-c", "apt-get update -y "}).
+		WithExec([]string{"sh", "-c", "apt-get install neovim -y"}).
+
+		WithExec([]string{"sh", "-c", "rm -rf /var/lib/apt/lists/*"}).
 
 		WithExec([]string{"sh", "-c",
 			"curl -fsSL https://go.dev/dl/go1.23.5.linux-amd64.tar.gz | tar -xz -C /usr/local"}).
@@ -46,10 +54,10 @@ func (m *Cloudfiles) playgroundContainer() *dagger.Container {
 				"/usr/local/go/bin:"+
 				"/root/go/bin:"+
 				"/usr/local/bin:"+
-				"/usr/bin:/bin:/usr/sbin:/sbin").
+				"/root/.local/bin:"+
+				"/usr/bin:/bin:/usr/sbin:/sbin")
 
-		WithExec([]string{"sh", "-c", "cargo install moltis --git https://github.com/moltis-org/moltis"}).
-
+		// WithExec([]string{"sh", "-c", "curl -fsSL https://www.moltis.org/install.sh | sh -s -- --method=binary"})
 
 		// WithExec([]string{"sh", "-c",
 		// 	"fnm install v25",
@@ -57,5 +65,5 @@ func (m *Cloudfiles) playgroundContainer() *dagger.Container {
 		// 	// "npm install -g @mariozechner/pi-coding-agent",
 		// }).
 
-		WithWorkdir("/root")
+		// WithWorkdir("/root")
 }

@@ -132,22 +132,26 @@ func (m *Cloudfiles) AiNode(
 		Stdout(ctx)
 }
 
-// Playground returns the fully-built debug/playground container image.
-//
-// Useful for chaining or interactive inspection:
-//
-//	dagger call playground terminal
 func (m *Cloudfiles) Playground() *dagger.Container {
-	return m.playgroundContainer()
+	return m.playgroundContainer().WithWorkdir("/root")
 }
 
-// PlaygroundExport builds the playground container and exports it to the
-// host's local Docker image store under the given name.
-//
-// Usage:
-//
+func (m *Cloudfiles) Moltis() *dagger.Container {
+	return m.
+		playgroundContainer().
+		WithExec([]string{"sh", "-c", "curl -fsSL https://www.moltis.org/install.sh | sh -s -- --method=binary"}).
+		WithWorkdir("/root")
+}
+
+func (m *Cloudfiles) MoltisTerm() *dagger.Container {
+	return m.
+		Moltis().
+		Terminal()
+}
+
+
 //	dagger call playground-export
 //	docker run --rm -it --network host --name pg-debug-001 playground bash
 func (m *Cloudfiles) PlaygroundExec() *dagger.Container {
-	return m.playgroundContainer().Terminal()
+	return m.playgroundContainer().WithWorkdir("/root").Terminal()
 }
